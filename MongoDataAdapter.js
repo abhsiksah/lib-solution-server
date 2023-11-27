@@ -120,39 +120,21 @@ class MongoDataAdapter {
       // Execute the query
       const cursor = collection.find(searchQuery);
 
+      //get loanrcds
+
+      const loanrcrdCollections = database.collection("LoanRcd");
+
+      const loanRecords = await loanrcrdCollections.find().toArray();
+      const loanRecordstrimmed = loanRecords.map((elem) => elem.book_id);
+
       // Iterate through the results and create Book objects
       await cursor.forEach((bookDoc) => {
-        const book = this.createBookFromDocument(bookDoc);
-        searchResults.push(book);
+        if (loanRecordstrimmed.includes(bookDoc._id.toString())) {
+          searchResults.push(this.createBookFromDocumentissued(bookDoc));
+        } else {
+          searchResults.push(this.createBookFromDocument(bookDoc));
+        }
       });
-
-      //start your code
-
-      //now acees loan record collection   const collection = database.collection("LoadRcd");
-      //from here we will pull bookid from each books and compare it with the _id inside Book collection
-      //i guess we should use map function for traversing both the array of books and loadrcd and get a
-      //common array whre we have similar book id and for all those whose bookid is common plz add a true flag
-      // in th reponse object
-      //
-
-      //       {
-      //         "id": "64c5ec00d233b2b2e8e6f256",
-      //         "title": "The Adventures of Huckleberry Finns",
-      //         "description": "A novel by Mark Twain.",
-      //         "price": 15.99,
-      //         "author": "Twain",
-      //         "publisher": "Twain Mark"
-      //     },
-      // new object
-      //  {
-      //         "id": "64c5ec00d233b2b2e8e6f256",
-      //         "title": "The Adventures of Huckleberry Finns",
-      //         "description": "A novel by Mark Twain.",
-      //         "price": 15.99,
-      //         "author": "Twain",
-      //         "publisher": "Twain Mark"
-      //          "isIssued":false,
-      //     },
     } catch (error) {
       // Handle exceptions
       console.error("Error searching books:", error);
@@ -189,6 +171,47 @@ class MongoDataAdapter {
           extended_due_date,
         };
       });
+    } catch (error) {
+      console.error("Error fetching loan records:", error);
+      return null;
+    }
+  }
+
+  async addSingleLoanRecord(userid, bookid) {
+    try {
+      const database = this.mongoClient.db("ADBMS");
+      const loanrecdcollection = database.collection("LoanRcd");
+
+      let loanrecrdData = {
+        user_id: userid,
+        book_id: bookid,
+        copy_id: "64c1ec00df73bab6e8e6f058",
+        borrow_date: new Date(),
+        due_date: new Date(),
+        actual_return_date: new Date(),
+        extended_due_date: new Date(),
+      };
+
+      await loanrecdcollection.insertOne(loanrecrdData, (err, result) => {
+        if (err) {
+          return undefined;
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Error fetching loan records:", error);
+      return null;
+    }
+  }
+
+  async deleteSingleLoanRecord(bookid) {
+    try {
+      const database = this.mongoClient.db("ADBMS");
+      const loanrecdcollection = database.collection("LoanRcd");
+
+      await loanrecdcollection.deleteOne({ book_id: bookid });
+      return "deleted record";
     } catch (error) {
       console.error("Error fetching loan records:", error);
       return null;
@@ -274,11 +297,19 @@ class MongoDataAdapter {
       // Fetch book details based on the provided book ID
       const book = await collection.findOne({ _id: new ObjectId(bookId) });
 
+      const loanrcrdCollections = database.collection("LoanRcd");
+
+      const loanRecords = await loanrcrdCollections.find().toArray();
+      const loanRecordstrimmed = loanRecords.map((elem) => elem.book_id);
+
       // Check if the book exists
       if (book) {
+        if (loanRecordstrimmed.includes(book._id.toString())) {
+          return this.createBookFromDocumentissued(book);
+        } else {
+          return this.createBookFromDocument(book);
+        }
         // Transform the retrieved book document into a structured book object
-        const bookDetails = this.createBookFromDocument(book);
-        return bookDetails;
       } else {
         return null; // If the book with the given ID doesn't exist
       }
@@ -295,8 +326,21 @@ class MongoDataAdapter {
     const price = bookDoc.price;
     const author = bookDoc.author;
     const publisher = bookDoc.publisher;
+    const isIssued = false;
 
-    return { id, title, description, price, author, publisher };
+    return { id, title, description, price, author, publisher, isIssued };
+  }
+
+  createBookFromDocumentissued(bookDoc) {
+    const id = bookDoc._id.toString();
+    const title = bookDoc.title;
+    const description = bookDoc.description;
+    const price = bookDoc.price;
+    const author = bookDoc.author;
+    const publisher = bookDoc.publisher;
+    const isIssued = true;
+
+    return { id, title, description, price, author, publisher, isIssued };
   }
 }
 

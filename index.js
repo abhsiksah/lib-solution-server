@@ -9,28 +9,6 @@ app.use(cors());
 
 app.use(express.json());
 
-// // Endpoint for handling the search request
-
-// // Route handler for the root path '/'
-// app.get("/", (req, res) => {
-//   res.sendFile(path.join(__dirname, "public", "login.html"));
-// });
-
-// // Route for serving signup.html
-// app.get("/signup", (req, res) => {
-//   res.sendFile(path.join(__dirname, "public", "signup.html"));
-// });
-
-// // Add a route for '/home'
-// app.get("/home", (req, res) => {
-//   res.sendFile(path.join(__dirname, "public", "home.html")); // Adjust this line to serve your home page
-// });
-
-// // Add a route for '/loanRcd'
-// app.get("/loanRcd", (req, res) => {
-//   res.sendFile(path.join(__dirname, "public", "loanRcd.html")); // Adjust this line to serve your loanRcd page
-// });
-
 const port = 3000; // Use any port of your choice
 app.listen(port, () => {
   console.log(`Server listening on port ${port}`);
@@ -87,6 +65,41 @@ app.post("/signup", async (req, res) => {
 app.get("/loan-records", async (req, res) => {
   try {
     const loanRecords = await dataAdapter.getAllLoanRecords();
+
+    if (loanRecords) {
+      res.status(200).json({ loanRecords });
+    } else {
+      res.status(500).json({ error: "Error fetching loan records" });
+    }
+  } catch (error) {
+    console.error("Error fetching loan records:", error);
+    res.status(500).json({ error: "Error fetching loan records" });
+  }
+});
+
+app.post("/loan-records", async (req, res) => {
+  try {
+    const loanRecords = await dataAdapter.addSingleLoanRecord(
+      req.body.userid,
+      req.body.bookid
+    );
+
+    if (loanRecords) {
+      res.status(200).json({ loanRecords });
+    } else {
+      res.status(500).json({ error: "Error fetching loan records" });
+    }
+  } catch (error) {
+    console.error("Error fetching loan records:", error);
+    res.status(500).json({ error: "Error fetching loan records" });
+  }
+});
+
+app.delete("/loan-records", async (req, res) => {
+  try {
+    const loanRecords = await dataAdapter.deleteSingleLoanRecord(
+      req.body.bookid
+    );
 
     if (loanRecords) {
       res.status(200).json({ loanRecords });
